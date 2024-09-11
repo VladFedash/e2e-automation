@@ -44,12 +44,14 @@ jobs:
       - name: Get test summary
         id: test_summary
         run: |
-          passed=$(cat test-results-${{ matrix.project }}.json | jq '[.suites[].specs[].tests[] | select(.status == "passed")] | length')
-          failed=$(cat test-results-${{ matrix.project }}.json | jq '[.suites[].specs[].tests[] | select(.status == "failed")] | length')
-          skipped=$(cat test-results-${{ matrix.project }}.json | jq '[.suites[].specs[].tests[] | select(.status == "skipped")] | length')
-          echo "::set-output name=passed::$passed"
-          echo "::set-output name=failed::$failed"
-          echo "::set-output name=skipped::$skipped"
+          RESULTS_JSON="test-results.json"
+          PASSED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "passed")] | length' $RESULTS_JSON)
+          FAILED=$(jq '[.suites[].specs[].tests[] | select(.results[-1].status == "failed")] | length' $RESULTS_JSON)
+          SKIPPED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "skipped")] | length' $RESULTS_JSON)
+
+          echo "PASSED=$PASSED" >> $GITHUB_ENV
+          echo "FAILED=$FAILED" >> $GITHUB_ENV
+          echo "SKIPPED=$SKIPPED" >> $GITHUB_ENV
 
         # Send a notification to Slack with the results
       - name: Send Slack Notification
@@ -71,15 +73,15 @@ jobs:
                 "fields": [
                   {
                     "type": "mrkdwn",
-                    "text": "*Passed:* ${{ steps.test_summary.outputs.passed }}"
+                    "text": "*Passed:* ${{ env.PASSED }}"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Failed:* ${{ steps.test_summary.outputs.failed }}"
+                    "text": "*Failed:* ${{ env.FAILED }}"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Skipped:* ${{ steps.test_summary.outputs.skipped }}"
+                    "text": "*Skipped:* ${{ env.SKIPPED }}"
                   },
                   {
                     "type": "mrkdwn",
