@@ -9,6 +9,7 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
 
+  reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }]],
   testDir: 'src/tests', 
 
   projects: [
