@@ -38,14 +38,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.project }}
+          name: playwright-report-"${{ matrix.project }}"
           path: playwright-report
 
       - name: Parse Test Results
         if: always()
         id: parse_results
         run: |
-          RESULTS_JSON="test-results-${{ matrix.project }}.json"
+          RESULTS_JSON="test-results-"${{ matrix.project }}".json"
           PASSED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "passed")] | length' $RESULTS_JSON)
           FAILED=$(jq '[.suites[].specs[].tests[] | select(.results[-1].status == "failed")] | length' $RESULTS_JSON)
           SKIPPED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "skipped")] | length' $RESULTS_JSON)
