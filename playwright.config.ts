@@ -9,8 +9,10 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
 
-  reporter: [['html', { outputFolder: 'playwright-report' }]],
-  testDir: 'src/tests',
+  reporter: [
+    ['json', { outputFile: 'test-results.json' }],
+    ['html', { outputFolder: 'playwright-report' }]
+  ],
 
   projects: [
     {
