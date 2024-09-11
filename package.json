@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "playwright": "^1.47.0"
+  },
+  "scripts": {
+    "test": "npx playwright test",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^22.5.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}
