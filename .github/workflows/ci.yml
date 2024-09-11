@@ -23,7 +23,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: "16"
 
       - name: Install dependencies
         run: npm install
@@ -41,18 +41,29 @@ jobs:
           name: playwright-report
           path: playwright-repor
 
+      - name: Get test summary
+        id: test_summary
+        run: |
+          passed=$(cat test-results-${{ matrix.project }}.json | jq '[.suites[].specs[].tests[] | select(.status == "passed")] | length')
+          failed=$(cat test-results-${{ matrix.project }}.json | jq '[.suites[].specs[].tests[] | select(.status == "failed")] | length')
+          skipped=$(cat test-results-${{ matrix.project }}.json | jq '[.suites[].specs[].tests[] | select(.status == "skipped")] | length')
+          echo "::set-output name=passed::$passed"
+          echo "::set-output name=failed::$failed"
+          echo "::set-output name=skipped::$skipped"
+
+        # Send a notification to Slack with the results
       - name: Send Slack Notification
-        if: always()  # Run this step even if tests fail
+        if: always() # Ensure this step runs even if tests fail
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
-            "text": ":robot_face: *Playwright Test Results*\nBranch: ${{ github.ref_name }}\nTests: ${{ steps.test_results.outcome }}",
+            "text": ":robot_face: *Playwright Test Results*\nProject: ${{ matrix.project }}\n*Branch:* ${{ github.ref_name }}\n*Total Passed:* ${{ steps.test_summary.outputs.passed }}\n*Total Failed:* ${{ steps.test_summary.outputs.failed }}\n*Total Skipped:* ${{ steps.test_summary.outputs.skipped }}",
             "blocks": [
               {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Playwright Test Results*\nBranch: ${{ github.ref_name }}\nCommit: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|View Commit>"
+                  "text": "*Playwright Test Results for ${{ matrix.project }}*\nBranch: ${{ github.ref_name }}\nCommit: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|View Commit>"
                 }
               },
               {
@@ -60,18 +71,26 @@ jobs:
                 "fields": [
                   {
                     "type": "mrkdwn",
-                    "text": "*Status:* ${{ steps.test_results.outcome }}"
+                    "text": "*Passed:* ${{ steps.test_summary.outputs.passed }}"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Repository:* ${{ github.repository }}"
+                    "text": "*Failed:* ${{ steps.test_summary.outputs.failed }}"
                   },
                   {
                     "type": "mrkdwn",
-                    "text": "*Workflow URL:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                    "text": "*Skipped:* ${{ steps.test_summary.outputs.skipped }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Project:* ${{ matrix.project }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*View Workflow:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
                   }
                 ]
-              }
+            }
             ]
           }' \
           ${{ secrets.SLACK_WEBHOOK_URL }}
