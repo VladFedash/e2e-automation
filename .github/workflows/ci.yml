@@ -25,9 +25,6 @@ jobs:
         with:
           node-version: '16'
 
-      - name: Generate Playwright HTML report
-        run: npx playwright show-report
-
       - name: Install dependencies
         run: npm install
 
@@ -36,3 +33,6 @@ jobs:
 
       - name: Run tests
         run: npx playwright test --project="${{ matrix.project }}"
+
+      - name: Generate Playwright HTML report
+        run: npx playwright show-report
