@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: "16"
 
@@ -33,71 +33,62 @@ jobs:
 
       - name: Run tests
         run: npx playwright test --project="${{ matrix.project }}"
-
-      - name: Run Playwright tests and output JSON report
-        run: |
-          npx playwright test --reporter=json > test-results.json
-
-      - name: Upload Playwright Test Report
+  
+      - name: Upload Playwright Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report
 
-      - name: Get test summary
-        if: always() # Ensure this step runs even if tests fail
-        id: test_summary
+      - name: Parse Test Results
+        if: always()
+        id: parse_results
         run: |
           RESULTS_JSON="test-results.json"
           PASSED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "passed")] | length' $RESULTS_JSON)
           FAILED=$(jq '[.suites[].specs[].tests[] | select(.results[-1].status == "failed")] | length' $RESULTS_JSON)
           SKIPPED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "skipped")] | length' $RESULTS_JSON)
 
+          if [ "$FAILED" -gt 0 ]; then
+            COLOR="#ff0000"  # Red
+          else
+            COLOR="#36a64f"  # Green
+          fi
+
+          echo "COLOR=$COLOR" >> $GITHUB_ENV
           echo "PASSED=$PASSED" >> $GITHUB_ENV
           echo "FAILED=$FAILED" >> $GITHUB_ENV
           echo "SKIPPED=$SKIPPED" >> $GITHUB_ENV
 
-        # Send a notification to Slack with the results
-      - name: Send Slack Notification
-        if: always() # Ensure this step runs even if tests fail
+      - name: Set Job URL
+        if: always()
+        run: |
+          PROJECT_NAME_ENCODED=$(echo "${{ matrix.project }}" | sed 's/ /%20/g')
+          JOB_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifact-${PROJECT_NAME_ENCODED}"
+          echo "JOB_URL=$JOB_URL" >> $GITHUB_ENV
+
+      - name: Send notification to Slack
+        if: always()
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
-            "text": ":robot_face: *Playwright Test Results*\nProject: ${{ matrix.project }}\n*Branch:* ${{ github.ref_name }}\n*Total Passed:* ${{ steps.test_summary.outputs.passed }}\n*Total Failed:* ${{ steps.test_summary.outputs.failed }}\n*Total Skipped:* ${{ steps.test_summary.outputs.skipped }}",
-            "blocks": [
+            "text": "'"${{ matrix.project }} test results for <${{ env.JOB_URL }}|job>."'", 
+            "attachments": [
               {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Playwright Test Results for ${{ matrix.project }}*\nBranch: ${{ github.ref_name }}\nCommit: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|View Commit>"
-                }
-              },
-              {
-                "type": "section",
+                "color": "'"${{ env.COLOR }}"'",
                 "fields": [
                   {
-                    "type": "mrkdwn",
-                    "text": "*Passed:* ${{ env.PASSED }}"
+                    "title": "Status",
+                    "value": "'"${{ job.status }}"'",
+                    "short": true
                   },
                   {
-                    "type": "mrkdwn",
-                    "text": "*Failed:* ${{ env.FAILED }}"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Skipped:* ${{ env.SKIPPED }}"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*Project:* ${{ matrix.project }}"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*View Workflow:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow>"
+                    "title": "Test Results",
+                    "value": "Failed: ${{ env.FAILED }}\nSkipped: ${{ env.SKIPPED }}\nPassed: ${{ env.PASSED }}",
+                    "short": true
                   }
                 ]
-            }
+              }
             ]
-          }' \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
