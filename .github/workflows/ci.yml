@@ -39,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-repor
+          path: playwright-report
 
       - name: Get test summary
         if: always() # Ensure this step runs even if tests fail
