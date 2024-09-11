@@ -131,4 +131,3 @@ dist
 
 # playwright file
 test-results.json
-playwright-report
