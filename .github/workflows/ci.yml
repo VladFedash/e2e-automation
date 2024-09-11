@@ -42,6 +42,7 @@ jobs:
           path: playwright-repor
 
       - name: Get test summary
+        if: always() # Ensure this step runs even if tests fail
         id: test_summary
         run: |
           RESULTS_JSON="test-results.json"
