@@ -34,6 +34,10 @@ jobs:
       - name: Run tests
         run: npx playwright test --project="${{ matrix.project }}"
 
+      - name: Run Playwright tests and output JSON report
+        run: |
+          npx playwright test --reporter=json > test-results.json
+
       - name: Upload Playwright Test Report
         if: always()
         uses: actions/upload-artifact@v4
