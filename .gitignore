@@ -129,6 +129,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# playwright file
+# Ignore Playwright reports and test results
+/playwright-report/
+/test-results/
 test-results.json
-playwright-report

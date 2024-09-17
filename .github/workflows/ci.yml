@@ -12,18 +12,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        project: [Desktop Chrome, Mobile Chrome]
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: "16"
 
       - name: Install dependencies
         run: npm install
@@ -31,5 +27,63 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install
 
-      - name: Run tests
-        run: npx playwright test --project="${{ matrix.project }}"
+      - name: Run all tests
+        run: npx playwright test
+  
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: Parse Test Results
+        if: always()
+        id: parse_results
+        run: |
+          RESULTS_JSON="test-results.json"
+          PASSED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "passed")] | length' $RESULTS_JSON)
+          FAILED=$(jq '[.suites[].specs[].tests[] | select(.results[-1].status == "failed")] | length' $RESULTS_JSON)
+          SKIPPED=$(jq '[.suites[].specs[].tests[].results[] | select(.status == "skipped")] | length' $RESULTS_JSON)
+
+          if [ "$FAILED" -gt 0 ]; then
+            COLOR="#ff0000"  # Red
+          else
+            COLOR="#36a64f"  # Green
+          fi
+
+          echo "COLOR=$COLOR" >> $GITHUB_ENV
+          echo "PASSED=$PASSED" >> $GITHUB_ENV
+          echo "FAILED=$FAILED" >> $GITHUB_ENV
+          echo "SKIPPED=$SKIPPED" >> $GITHUB_ENV
+
+      - name: Set Job URL
+        if: always()
+        run: |
+          JOB_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifact-playwright-report"
+          echo "JOB_URL=$JOB_URL" >> $GITHUB_ENV
+
+      - name: Send notification to Slack
+        if: always()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "text": "Test results for all projects combined. View the detailed report <${{ env.JOB_URL }}|job>.", 
+            "attachments": [
+              {
+                "color": "'"${{ env.COLOR }}"'",
+                "fields": [
+                  {
+                    "title": "Status",
+                    "value": "'"${{ job.status }}"'",
+                    "short": true
+                  },
+                  {
+                    "title": "Test Results",
+                    "value": "Failed: ${{ env.FAILED }}\nSkipped: ${{ env.SKIPPED }}\nPassed: ${{ env.PASSED }}",
+                    "short": true
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
