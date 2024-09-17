@@ -21,5 +21,5 @@ test('basic test @desktop', async ({ page }) => {
 test('basic test @mobile', async ({ page }) => {
   await page.goto('https://example.com');
   const title = await page.title();
-  expect(title).toBe('Example Domain wrong');
+  expect(title).toBe('Example Domain');
 });
