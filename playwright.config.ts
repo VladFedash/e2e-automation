@@ -9,11 +9,6 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
 
-  reporter: [
-    ['json', { outputFile: 'test-results.json' }],
-    ['html', { outputFolder: 'playwright-report' }]
-  ],
-
   projects: [
     {
       name: 'Desktop Chrome',
@@ -38,5 +33,10 @@ export default defineConfig({
         headless: true,
       },
     }
+  ],
+
+  reporter: [
+    ['json', { outputFile: 'test-results.json' }],
+    ['html', { outputFolder: 'playwright-report' }]
   ],
 });

@@ -12,10 +12,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        project: [Desktop Chrome, Mobile Chrome]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,8 +27,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install
 
-      - name: Run tests
-        run: npx playwright test --project="${{ matrix.project }}"
+      - name: Run all tests
+        run: npx playwright test
   
       - name: Upload Playwright Report
         if: always()
@@ -64,8 +60,7 @@ jobs:
       - name: Set Job URL
         if: always()
         run: |
-          PROJECT_NAME_ENCODED=$(echo "${{ matrix.project }}" | sed 's/ /%20/g')
-          JOB_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifact-${PROJECT_NAME_ENCODED}"
+          JOB_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifact-playwright-report"
           echo "JOB_URL=$JOB_URL" >> $GITHUB_ENV
 
       - name: Send notification to Slack
@@ -73,7 +68,7 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
-            "text": "'"${{ matrix.project }} test results for <${{ env.JOB_URL }}|job>."'", 
+            "text": "Test results for all projects combined. View the detailed report <${{ env.JOB_URL }}|job>."'", 
             "attachments": [
               {
                 "color": "'"${{ env.COLOR }}"'",
