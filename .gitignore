@@ -128,3 +128,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Ignore Playwright reports and test results
+/playwright-report/
+/test-results/
+test-results.json
