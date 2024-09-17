@@ -68,7 +68,7 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
-            "text": "Test results for all projects combined. View the detailed report <${{ env.JOB_URL }}|job>."'", 
+            "text": "Test results for all projects combined. View the detailed report <${{ env.JOB_URL }}|job>.", 
             "attachments": [
               {
                 "color": "'"${{ env.COLOR }}"'",
