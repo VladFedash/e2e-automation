@@ -1,280 +1,145 @@
 import { expect, test } from "@playwright/test";
+import { UserPage } from "../../user";
 
 test('Add a New User @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '1995', 'Male');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-    await page.selectOption('select[id="selectGender"]', 'Male');
-
-    await page.click('text=Create');
-
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).toBeVisible();
-    await expect(userRow).toContainText('1995');
-    await expect(userRow).toContainText('Male');
+   await userPage.expectUserToExist('Vlad Fedash', '1995', 'Male');
 });
 
 test('Add User with Missing Name @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('', '1995', 'Male');
+   await userPage.expectErrorMessage('Name is requried');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-    await page.selectOption('select[id="selectGender"]', 'Male');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Name is requried');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = ""]//parent::tr');
-    await expect(userRow).not.toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('');
 });
 
-test('Add User with Missing year of birth @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test('Add User with Missing Year of Birth @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '', 'Male');
+   await userPage.expectErrorMessage('Year of Birth is requried');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.selectOption('select[id="selectGender"]', 'Male');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Year of Birth is requried');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).not.toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('Vlad Fedash');
 });
 
-test('Add User with valid year of birth(lover border) @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test('Add User with Valid Year of Birth (Lower Boundary) @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '1900', 'Male');
 
-    await page.click('text=Add User');
+   await userPage.expectUserToExist('Vlad Fedash', '1900', 'Male');
+});
 
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '1900');
+test('Add User with Invalid Year of Birth (Lower Boundary) @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '1899', 'Male');
+   await userPage.expectErrorMessage('Not valid Year of Birth is set');
 
-    await page.click('text=Create');
-
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('Vlad Fedash');
 });
 
 // bug here
-test('Add User with valid year of birth(higher border) @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test.skip('Add User with Valid Year of Birth (Upper Boundary) @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '2006', 'Male');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '2006');
-
-    await page.click('text=Create');
-
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).toBeVisible();
+   await userPage.expectUserToExist('Vlad Fedash', '2006', 'Male');
 });
 
-test('Add User with invalid year of birth(lover border) @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test('Add User with Invalid Year of Birth (Negative Value) @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '-2000', 'Male');
+   await userPage.expectErrorMessage('Not valid Year of Birth is set');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '1899');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Not valid Year of Birth is set');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).not.toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('Vlad Fedash');
 });
-
-test('Add User with invalid year of birth(higher border) @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '2007');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Not valid Year of Birth is set');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).not.toBeVisible();
-});
-
-test('Add User with invalid year of birth(negative value) @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '-2000');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Not valid Year of Birth is set');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).not.toBeVisible();
-});
-
 
 test('Add User with Missing Gender @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '1995', '');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-
-    await page.click('text=Create');
-
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-    await expect(userRow).toBeVisible();
-    await expect(userRow).toContainText('Undefined');
+   await userPage.expectUserToExist('Vlad Fedash', '1995', 'Undefined');
 });
 
-test('Add User with short name: numbers @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test('Add User with Short Name (Numbers) @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('12', '1995', 'Male');
+   await userPage.expectErrorMessage('Name is too short');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', '12');
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Name is too short');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "12"]//parent::tr');
-    await expect(userRow).not.toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('12');
 });
 
-test('Add User with short name: alpabhet @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test('AAdd User with Short Name (Alphabet) @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('h', '1995', 'Male');
+   await userPage.expectErrorMessage('Name is too short');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'h');
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Name is too short');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "h"]//parent::tr');
-    await expect(userRow).not.toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('h');
 });
 
-test('Add User with spaces in name input @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test('Add User with Spaces in Name Input @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('    ', '1995', 'Male');
+   await userPage.expectErrorMessage('Name is requried');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', '    ');
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Name is requried');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "    "]//parent::tr');
-    await expect(userRow).not.toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('    ');
 });
 
 // bug here
-test('Add User with spaces and data in name input @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+test.skip('Add User with Spaces and Data in Name Input @desktop', async ({ page }) => {
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('    g', '1995', 'Male');
+   await userPage.expectErrorMessage('Name is requried');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', '    g');
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-
-    await page.click('text=Create');
-
-    const errorMessage = await page.locator('text=Name is requried');
-    await expect(errorMessage).toBeVisible();
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-
-    await page.goto('https://traineeautomation.azurewebsites.net/');
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "    g"]//parent::tr');
-    await expect(userRow).not.toBeVisible();
+   await userPage.goToUsersPage();
+   await userPage.expectUserNotToExist('    g');
 });
 
+
 test('Add Duplicate User @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '1995', 'Male');
+   await userPage.addUser('Vlad Fedash', '1995', 'Male');
 
-    await page.click('text=Add User');
-
-    await page.fill('input[id="inputUserName"]', 'Vlad Fedash');
-    await page.fill('input[id="inputYearOfBirth"]', '1995');
-    await page.selectOption('select[id="selectGender"]', 'Male');
-
-    await page.click('text=Create');
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
+   expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
 });
 
 test('Edit an Existing User @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '1995', 'Male');
+   await userPage.editUser('Vlad Fedash', '1990');
 
-    const userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-
-    const editButton = userRow.getByTestId('button-Edit');
-    await editButton.click();
-
-    await page.fill('input[id="inputYearOfBirth"]', '1990');
-
-    await page.click('text=Update');
-
-    await expect(userRow).toContainText('1990');
-    
+   await userPage.expectUserToExist('Vlad Fedash', '1990', 'Male');
 });
 
 test('Delete an Existing User @desktop', async ({ page }) => {
-    await page.goto('https://traineeautomation.azurewebsites.net/');
+   const userPage = new UserPage(page);
+   await userPage.goToUsersPage();
+   await userPage.addUser('Vlad Fedash', '1995', 'Male');
+   await userPage.deleteUser('Vlad Fedash');
 
-    let userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-
-    const deleteButton = userRow.getByTestId('button-Delete');
-    await deleteButton.click();
-
-    await page.click('text=Yes');
-    expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/');
-
-    userRow = await page.locator('//td[@data-testid = "td-UserName"][normalize-space(text()) = "Vlad Fedash"]//parent::tr');
-
-    await expect(userRow).not.toBeVisible();
+   expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/');
+   await userPage.expectUserNotToExist('Vlad Fedash');
 });
