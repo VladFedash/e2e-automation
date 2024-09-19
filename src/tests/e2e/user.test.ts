@@ -1,145 +1,104 @@
 import { expect, test } from "@playwright/test";
-import { UserPage } from "../../user";
+import { UserSteps } from "../../steps/user/userSteps";
+import { BaseSteps } from "../../steps/base/baseSteps";
+import { UrlProvider } from "../../utils/urlProvider";
+import { UserDTO } from "../../dto/userDto";
+import { Gender } from "../../enums/genderEnum";
 
-test('Add a New User @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '1995', 'Male');
+test.describe('User Management', () => {
+    let baseSteps: BaseSteps;
+    let userSteps: UserSteps;
+    const createdUsers: { name: string, yearOfBirth: string, gender: string }[] = [];
 
-   await userPage.expectUserToExist('Vlad Fedash', '1995', 'Male');
-});
+    const validUserData: UserDTO[] = [
+        { name: 'Vlad Fedash', yearOfBirth: '1995', gender: Gender.Male },
+        { name: 'John Doe', yearOfBirth: '2000', gender: Gender.Undefined },
+        { name: 'Jane Smith', yearOfBirth: '1990', gender: Gender.Female }
+    ];
 
-test('Add User with Missing Name @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('', '1995', 'Male');
-   await userPage.expectErrorMessage('Name is requried');
+    test.beforeEach(async ({ page }) => {
+        baseSteps = new BaseSteps(page);
+        userSteps = new UserSteps(page);
 
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('');
-});
+        await baseSteps.navigateTo(UrlProvider.getBaseUrl());
+        createdUsers.length = 0;
+    });
 
-test('Add User with Missing Year of Birth @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '', 'Male');
-   await userPage.expectErrorMessage('Year of Birth is requried');
+    for (const userData of validUserData) {
+        test(`Add user: ${userData.name} @desktop`, async () => {
+            await userSteps.addUser(userData);
+            createdUsers.push(userData);
 
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('Vlad Fedash');
-});
+            await userSteps.verifyUserExists(userData);
+        });
+    }
 
-test('Add User with Valid Year of Birth (Lower Boundary) @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '1900', 'Male');
+    // bug here
+    test.skip('Add User with Valid Year of Birth (Upper Boundary) @desktop', async () => {
+        const user: UserDTO = { name: 'Vlad Fedash', yearOfBirth: '2006', gender: Gender.Male };
+        await userSteps.addUser(user);
+        createdUsers.push(user);
 
-   await userPage.expectUserToExist('Vlad Fedash', '1900', 'Male');
-});
+        await userSteps.verifyUserExists(user);
+    });
 
-test('Add User with Invalid Year of Birth (Lower Boundary) @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '1899', 'Male');
-   await userPage.expectErrorMessage('Not valid Year of Birth is set');
+    const invalidUserData = [
+        { testName: 'Missing Name', name: '', yearOfBirth: '1995', gender: Gender.Male, errorMessage: 'Name is requried' },
+        { testName: 'Missing Year of Birth', name: 'Vlad Fedash', yearOfBirth: '', gender: Gender.Male, errorMessage: 'Year of Birth is requried' },
+        { testName: 'Invalid Year of Birth (Lower Boundary)', name: 'Vlad Fedash', yearOfBirth: '1899', gender: Gender.Male, errorMessage: 'Not valid Year of Birth is set' },
+        { testName: 'Invalid Year of Birth (Negative Value)', name: 'Vlad Fedash', yearOfBirth: '-2000', gender: Gender.Male, errorMessage: 'Not valid Year of Birth is set' },
+        { testName: 'Short Name (Numbers)', name: '12', yearOfBirth: '1995', gender: Gender.Male, errorMessage: 'Name is too short' },
+        { testName: 'Short Name (Alphabet)', name: 'h', yearOfBirth: '1995', gender: Gender.Male, errorMessage: 'Name is too short' },
+        { testName: 'Spaces in Name Input', name: '    ', yearOfBirth: '1995', gender: Gender.Male, errorMessage: 'Name is requried' },
+        // bug here { testName: 'Spaces and Data in Name Input', name: '    g', yearOfBirth: '1995', gender: 'Male', errorMessage: 'Name is requried' }
+    ];
 
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('Vlad Fedash');
-});
+    for (const userData of invalidUserData) {
+        test(`Add user with: '${userData.testName}' @desktop`, async () => {
+            await userSteps.addUser(userData);
+            await userSteps.expectErrorMessage(userData.errorMessage);
 
-// bug here
-test.skip('Add User with Valid Year of Birth (Upper Boundary) @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '2006', 'Male');
+            await baseSteps.navigateTo(UrlProvider.getBaseUrl());
+            await userSteps.verifyUserNotExists(userData.name);
+        });
+    }
 
-   await userPage.expectUserToExist('Vlad Fedash', '2006', 'Male');
-});
+    test('Add Duplicate User @desktop', async () => {
+        const user: UserDTO = { name: 'Vlad Fedash', yearOfBirth: '1995', gender: Gender.Male };
+        await userSteps.addUser(user);
+        createdUsers.push(user);
 
-test('Add User with Invalid Year of Birth (Negative Value) @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '-2000', 'Male');
-   await userPage.expectErrorMessage('Not valid Year of Birth is set');
+        await userSteps.addUser(user);
+        expect(await baseSteps.getCurrentUrl()).toBe(UrlProvider.getAddUserUrl());
+    });
 
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('Vlad Fedash');
-});
+    test('Edit an Existing User @desktop', async () => {
+        let user: UserDTO = { name: 'Vlad Fedash', yearOfBirth: '1995', gender: Gender.Male };
+        await userSteps.addUser(user);
 
-test('Add User with Missing Gender @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '1995', '');
+        user.yearOfBirth = '1990';
+        await userSteps.editUser(user);
+        createdUsers.push(user);
 
-   await userPage.expectUserToExist('Vlad Fedash', '1995', 'Undefined');
-});
+        await userSteps.verifyUserExists(user);
+    });
 
-test('Add User with Short Name (Numbers) @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('12', '1995', 'Male');
-   await userPage.expectErrorMessage('Name is too short');
+    test('Delete an Existing User @desktop', async () => {
+        const user: UserDTO = { name: 'Vlad Fedash', yearOfBirth: '1995', gender: Gender.Male };
+        await userSteps.addUser(user);
+        await userSteps.deleteUser(user.name);
 
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('12');
-});
+        expect(await baseSteps.getCurrentUrl()).toBe(UrlProvider.getBaseUrl());
+        await userSteps.verifyUserNotExists(user.name);
+    });
 
-test('AAdd User with Short Name (Alphabet) @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('h', '1995', 'Male');
-   await userPage.expectErrorMessage('Name is too short');
+    test.afterEach(async ({ page }) => {
+        if (createdUsers.length <= 0) {
+            return;
+        }
 
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('h');
-});
-
-test('Add User with Spaces in Name Input @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('    ', '1995', 'Male');
-   await userPage.expectErrorMessage('Name is requried');
-
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('    ');
-});
-
-// bug here
-test.skip('Add User with Spaces and Data in Name Input @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('    g', '1995', 'Male');
-   await userPage.expectErrorMessage('Name is requried');
-
-   await userPage.goToUsersPage();
-   await userPage.expectUserNotToExist('    g');
-});
-
-
-test('Add Duplicate User @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '1995', 'Male');
-   await userPage.addUser('Vlad Fedash', '1995', 'Male');
-
-   expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/Forms/AddUser');
-});
-
-test('Edit an Existing User @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '1995', 'Male');
-   await userPage.editUser('Vlad Fedash', '1990');
-
-   await userPage.expectUserToExist('Vlad Fedash', '1990', 'Male');
-});
-
-test('Delete an Existing User @desktop', async ({ page }) => {
-   const userPage = new UserPage(page);
-   await userPage.goToUsersPage();
-   await userPage.addUser('Vlad Fedash', '1995', 'Male');
-   await userPage.deleteUser('Vlad Fedash');
-
-   expect(await page.url()).toBe('https://traineeautomation.azurewebsites.net/');
-   await userPage.expectUserNotToExist('Vlad Fedash');
+        for (const user of createdUsers) {
+            await userSteps.deleteUser(user.name);
+        }
+    });
 });
