@@ -278,5 +278,3 @@ test('Delete an Existing User @desktop', async ({ page }) => {
 
     await expect(userRow).not.toBeVisible();
 });
-
-
